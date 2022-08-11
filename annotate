@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // vi: set ft=javascript :
-const fs            = require('fs');
+const fs = require('fs');
 const child_process = require('child_process');
 
 
@@ -15,13 +15,13 @@ let cached_processing = {};
 const debug = process.env.INPUT_DEBUG === 'true';
 
 
-for(let notebook_path of find_notebook_files('.')) {
+for (let notebook_path of find_notebook_files('.')) {
   if (debug) {
     process.stdout.write(notebook_path + "\n");
   }
 
   let notebook_lines = fs.readFileSync(notebook_path, { encoding: 'utf8', flag: 'r' }).split("\n");
-      notebook_lines.unshift(null); // this way offset lines to start at index 1
+  notebook_lines.unshift(null); // this way offset lines to start at index 1
 
   let source_blocks = find_source_blocks(notebook_lines);
 
@@ -37,13 +37,14 @@ for(let notebook_path of find_notebook_files('.')) {
         .replace(/",?$/, '\n",');
 
       return source_code_lines.map((line) => {
-          return line // remove enclosing quotes and insert true newline & quotes
-            .trim()
-            .replace(/^"/, '')
-            .replace(/",?$/, '')
-            .replace(/\\n/g, "\n")
-            .replace(/\\"/g, '"');
-        });
+        return line // remove enclosing quotes and insert true newline & quotes
+          .trim()
+          .replace(/^"/, '')
+          .replace(/",?$/, '')
+          .replace(/\\n/g, "\n")
+          .replace(/\\"/g, '"')
+          .replace(/^\%.*/g, '');
+      });
     })
 
     .reduce((accumulator, current) => { // without initial value accumulator is first value of array
@@ -63,7 +64,7 @@ for(let notebook_path of find_notebook_files('.')) {
     }
 
     let error_information = reported_error.match(flake8_error_format);
-    
+
     if (!error_information) {
       return;
     }
@@ -101,8 +102,20 @@ for(let notebook_path of find_notebook_files('.')) {
       return;
     }
 
+    if (error_information[4] === 'F821' && error_information[5].includes("undefined name 'np'")) {
+      // don't report on F821 undefined name 'np'
+      // as this is because we ask participants to do this themselves
+      return;
+    }
+
+    if (error_information[4] === 'F821' && error_information[5].includes("undefined name '____'")) {
+      // don't report on F821 undefined name '____'
+      // as this is where we ask participants to fill in blanks
+      return;
+    }
+
     // 4 is the indentation level of embeded source code, +1 for the quote character
-    let column        = error_information[3] + 5;
+    let column = error_information[3] + 5;
     let error_message = `${error_information[4]} ${error_information[5]}`;
 
     process.stdout.write(
@@ -146,7 +159,7 @@ function* find_notebook_files(directory_path) {
 function find_source_blocks(lines) {
   let source_blocks = [];
 
-  for(let i = 1; i < lines.length;) {
+  for (let i = 1; i < lines.length;) {
     let match = lines[i].match(/^\s{3}"source":/);
 
     let cell_type = find_cell_type(i, lines);
@@ -174,7 +187,7 @@ function find_source_blocks(lines) {
 // rely on the fact that order of properties in a cell block is cell_type, metadata, source
 // and so looking backwards we should be able to find the cell_type in a few steps
 function find_cell_type(current_line, lines) {
-  for(let i = current_line - 1; i > 0; i--) {
+  for (let i = current_line - 1; i > 0; i--) {
     let match = lines[i].match(/^\s{3}"cell_type":/);
 
     if (match) {
@@ -189,7 +202,7 @@ function find_cell_type(current_line, lines) {
 
 function count_source_lines(source_property_line_number, content_lines) {
   let counter = 0;
-  for(let i = source_property_line_number + 1; i < content_lines.length; i++) {
+  for (let i = source_property_line_number + 1; i < content_lines.length; i++) {
     let match = content_lines[i].match(/^\s{4}"/);
     if (match) {
       counter++;
@@ -205,7 +218,7 @@ function count_source_lines(source_property_line_number, content_lines) {
 function absolute_line_number(reported_line_number, source_blocks) {
   let counter = 0; // a contignuous line number indicator, within the extracted source code
 
-  for(let i = 0; i < source_blocks.length; i++) {
+  for (let i = 0; i < source_blocks.length; i++) {
     let { source_line, lines_of_code } = source_blocks[i];
     for (let j = 0; j < lines_of_code; j++) {
       counter++;
