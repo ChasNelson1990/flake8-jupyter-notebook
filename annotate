@@ -108,9 +108,27 @@ for (let notebook_path of find_notebook_files('.')) {
       return;
     }
 
+    if (error_information[4] === 'F821' && error_information[5].includes("undefined name 'log'")) {
+      // don't report on F821 undefined name 'log'
+      // as this is because we ask participants to import this function themselves
+      return;
+    }
+
     if (error_information[4] === 'F821' && error_information[5].includes("undefined name '____'")) {
       // don't report on F821 undefined name '____'
       // as this is where we ask participants to fill in blanks
+      return;
+    }
+
+    if (error_information[4] === 'F821' && error_information[5].includes("undefined name 'factorial'")) {
+      // don't report on F821 undefined name 'factorial'
+      // as this is where we ask participants to guess if a built-in function exists
+      return;
+    }
+
+    if (error_information[4] === 'E999' && error_information[5].includes("expected an indented block")) {
+      // don't report on E999 IndentationError: expected an indented block
+      // as this is on purpose to demonstrate this error
       return;
     }
 
